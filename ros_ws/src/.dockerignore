@@ -1,0 +1,7 @@
+# Exclude VCS history from all packages
+**/.git
+**/docs
+
+# Only orbbec_description is needed from OrbbecSDK_ROS2
+OrbbecSDK_ROS2/orbbec_camera
+OrbbecSDK_ROS2/orbbec_camera_msgs

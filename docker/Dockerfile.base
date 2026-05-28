@@ -1,0 +1,47 @@
+FROM osrf/ros:humble-desktop-full
+
+# Set environment variables
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=UTC
+
+# Install dependencies and tools
+RUN apt-get update && apt-get install -y \
+    git wget curl python3-pip software-properties-common ros-dev-tools \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python packages
+RUN pip3 install --no-cache-dir setuptools==58.2.0 colcon-common-extensions
+
+# Add Gazebo repository
+RUN wget https://packages.osrfoundation.org/gazebo.gpg -O /usr/share/keyrings/pkgs-osrf-archive-keyring.gpg \
+    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/pkgs-osrf-archive-keyring.gpg] http://packages.osrfoundation.org/gazebo/ubuntu-stable $(lsb_release -cs) main" | tee /etc/apt/sources.list.d/gazebo-stable.list > /dev/null
+
+# Install ROS2 packages
+RUN apt-get update && apt-get install -y \
+    ros-humble-desktop \
+    ros-humble-control* \
+    ros-humble-ros2-control* \
+    ros-humble-moveit* \
+    ros-humble-ros-ign* \
+    ros-humble-joint-state-publisher-gui \
+    ros-humble-kinematics-interface-kdl \
+    ros-humble-rqt-joint-trajectory-controller \
+    ~nros-humble-rqt* \
+    ignition-fortress \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN apt-get update && apt-get upgrade -y
+
+# Install Gazebo Fortress + ROS2 bridge packages
+RUN apt-get update && apt-get install -y \
+  ros-humble-ros-gz \
+  ros-humble-ros-gz-bridge \
+  ros-humble-ros-gz-sim \
+  ros-humble-ros-gz-interfaces \
+  ros-humble-gz-ros2-control \
+  ros-humble-robot-state-publisher \
+  ros-humble-joint-state-publisher \
+  ros-humble-joint-state-publisher-gui \
+  ros-humble-xacro \
+  ros-humble-nav2-bringup \
+  ignition-fortress 

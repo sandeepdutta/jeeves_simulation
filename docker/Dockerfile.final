@@ -1,0 +1,24 @@
+ARG BASE_IMAGE=jeeves_humble_urdf
+FROM ${BASE_IMAGE}
+
+# Create a non-root user
+RUN useradd -m -s /bin/bash admin && \
+    echo "admin ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/admin
+
+# Set up the user's environment
+COPY ./.bashrc /home/admin/.bashrc
+RUN chown admin:admin /home/admin/.bashrc
+
+# Set the working directory
+WORKDIR /home/admin
+
+# Switch to the non-root user
+USER admin
+
+RUN rosdep update
+
+# Entrypoint
+COPY ./entrypoint.sh /entrypoint.sh
+RUN sudo chmod 755 /entrypoint.sh
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["bash"]
