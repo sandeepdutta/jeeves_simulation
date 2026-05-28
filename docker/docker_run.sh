@@ -37,6 +37,6 @@ docker run -it --rm \
     $device_options \
     --net=host \
     --privileged \
-    jeeves_humble_final:latest
+    sandeepdutta/jeeves_humble_final:latest
 
 echo "Docker container exited."

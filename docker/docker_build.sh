@@ -10,6 +10,6 @@ docker build --rm -t $CONTAINER_NAME_URDF:latest \
         -f ../ros_ws/src/jeeves_production_description/docker/jeeves/Dockerfile.jeeves_sim \
         --build-arg BASE_IMAGE=$CONTAINER_NAME_BASE \
         ../ros_ws/src
-docker build --rm -t jeeves_humble_final:latest -f Dockerfile.final \
+docker build --rm -t sandeepdutta/jeeves_humble_final:latest -f Dockerfile.final \
         --build-arg BASE_IMAGE=$CONTAINER_NAME_URDF ./
 echo "Docker Build Completed"
