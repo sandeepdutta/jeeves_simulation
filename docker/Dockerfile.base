@@ -3,10 +3,13 @@ FROM osrf/ros:humble-desktop-full
 # Set environment variables
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=UTC
+ENV NVIDIA_VISIBLE_DEVICES=all
+ENV NVIDIA_DRIVER_CAPABILITIES=all
 
 # Install dependencies and tools
 RUN apt-get update && apt-get install -y \
     git wget curl python3-pip software-properties-common ros-dev-tools \
+    vulkan-tools mesa-vulkan-drivers libvulkan1 \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python packages

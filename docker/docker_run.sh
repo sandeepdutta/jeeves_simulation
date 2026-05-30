@@ -12,11 +12,18 @@ docker_count=$(docker ps -a | grep CONTAINER_NAME | wc -l)
 XAUTH=/tmp/.docker.xauth_$docker_count
 sleep 0.1
 touch $XAUTH
+mkdir -p "${HOME}/.gz/sim"
 xauth nlist $DISPLAY | sed -e 's/^..../ffff/' | xauth -f $XAUTH nmerge -
 
 # Create a string with all --device options for each device in /dev/
 device_options=""
 for device in /dev/*; do
+    if [ -e "$device" ]; then
+        device_options+="--device=$device "
+    fi
+done
+# Explicitly add DRI render devices (subdirectory, missed by the loop above)
+for device in /dev/dri/*; do
     if [ -e "$device" ]; then
         device_options+="--device=$device "
     fi
@@ -38,10 +45,16 @@ docker run -it --rm \
     --volume="$BASH_RC_FILE:/home/$DOCKER_USER/.bashrc" \
     --volume="/tmp/.X11-unix:/tmp/.X11-unix:rw" \
     --volume="$XAUTH:$XAUTH" \
-    --volume="${HOME}/.ignition:/home/$DOCKER_USER/.ignition" \
+    --volume="${HOME}/.gz:/home/$DOCKER_USER/.gz" \
+    --volume="/usr/share/vulkan/icd.d:/usr/share/vulkan/icd.d:ro" \
+    --volume="/usr/lib/wsl:/usr/lib/wsl:ro" \
+    --env="LD_LIBRARY_PATH=/usr/lib/wsl/lib" \
     --env="XAUTHORITY=$XAUTH" \
     --env="DISPLAY" \
     --env="QT_X11_NO_MITSHM=1" \
+    --env="MESA_LOADER_DRIVER_OVERRIDE=d3d12" \
+    --env="GZ_SIM_RESOURCE_PATH=/home/$DOCKER_USER/gazebo_models:/home/$DOCKER_USER/jeeves_simulation/gazebo_models" \
+    --env="MESA_GL_VERSION_OVERRIDE=4.5COMPAT" \
     --workdir="/home/$DOCKER_USER" \
     $device_options \
     --net=host \
