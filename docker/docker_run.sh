@@ -22,14 +22,23 @@ for device in /dev/*; do
     fi
 done
 
+if docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
+    echo "Container $CONTAINER_NAME already running — attaching new shell."
+    docker exec -it $CONTAINER_NAME bash
+    exit 0
+fi
+
 docker run -it --rm \
     --name $CONTAINER_NAME \
+    --gpus all \
+    --env NVIDIA_DRIVER_CAPABILITIES=all \
     --user $(id -u):$(id -g) \
     --volume="${PWD%/*}:/home/$DOCKER_USER" \
     --volume="$BASH_HISTORY_FILE:/home/$DOCKER_USER/.bash_history" \
     --volume="$BASH_RC_FILE:/home/$DOCKER_USER/.bashrc" \
     --volume="/tmp/.X11-unix:/tmp/.X11-unix:rw" \
     --volume="$XAUTH:$XAUTH" \
+    --volume="${HOME}/.ignition:/home/$DOCKER_USER/.ignition" \
     --env="XAUTHORITY=$XAUTH" \
     --env="DISPLAY" \
     --env="QT_X11_NO_MITSHM=1" \
