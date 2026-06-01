@@ -42,4 +42,5 @@ RUN apt-get update && apt-get install -y \
   ros-humble-joint-state-publisher \
   ros-humble-joint-state-publisher-gui \
   ros-humble-xacro \
-  ros-humble-nav2-bringup
+  ros-humble-nav2-bringup \
+  ros-humble-robot-localization
