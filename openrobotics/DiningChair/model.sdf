@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sdf version="1.6">
+  <model name="DiningChair">
+    <static>true</static>
+    <link name="base_link">
+      <visual name="visual">
+        <geometry>
+          <mesh>
+            <uri>meshes/diningchair_clean.dae</uri>
+          </mesh>
+        </geometry>
+        <material>
+          <ambient>0.7 0.7 0.7 1</ambient>
+          <diffuse>0.7 0.7 0.7 1</diffuse>
+          <specular>0.3 0.3 0.3 1</specular>
+          <emissive>0.04 0.04 0.04 1</emissive>
+        </material>
+      </visual>
+      <collision name="Box001">
+        <pose>-0.146568 0.202837 0.217947 -0.0345933 0.0 0.0</pose>
+        <geometry>
+          <box>
+            <size>0.04 0.04 0.436154</size>
+          </box>
+        </geometry>
+      </collision>
+      <collision name="Box002">
+        <pose>-0.178948 -0.198708 0.217889 0.0415208 0.0 0.0</pose>
+        <geometry>
+          <box>
+            <size>0.04 0.04 0.436154</size>
+          </box>
+        </geometry>
+      </collision>
+      <collision name="Box003">
+        <pose>0.0 -0.000563771 0.372588 0.0 0.0 0.0</pose>
+        <geometry>
+          <box>
+            <size>0.3996 0.4468 0.148292</size>
+          </box>
+        </geometry>
+      </collision>
+      <collision name="Box004">
+        <pose>0.0 0.246451 0.700029 -0.156988 0.0 0.0</pose>
+        <geometry>
+          <box>
+            <size>0.35964 0.0272995 0.52543</size>
+          </box>
+        </geometry>
+      </collision>
+      <collision name="Box005">
+        <pose>0.17895 -0.198708 0.217889 0.0415208 0.0 0.0</pose>
+        <geometry>
+          <box>
+            <size>0.04 0.04 0.436154</size>
+          </box>
+        </geometry>
+      </collision>
+      <collision name="Box006">
+        <pose>0.14657 0.202837 0.217947 -0.0345933 0.0 0.0</pose>
+        <geometry>
+          <box>
+            <size>0.04 0.04 0.436154</size>
+          </box>
+        </geometry>
+      </collision>
+    </link>
+  </model>
+</sdf>

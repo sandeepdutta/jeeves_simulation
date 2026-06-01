@@ -53,7 +53,7 @@ docker run -it --rm \
     --env="DISPLAY" \
     --env="QT_X11_NO_MITSHM=1" \
     --env="MESA_LOADER_DRIVER_OVERRIDE=d3d12" \
-    --env="GZ_SIM_RESOURCE_PATH=/home/$DOCKER_USER/gazebo_models:/home/$DOCKER_USER/jeeves_simulation/gazebo_models" \
+    --env="GZ_SIM_RESOURCE_PATH=/home/$DOCKER_USER/openrobotics" \
     --env="MESA_GL_VERSION_OVERRIDE=4.5COMPAT" \
     --workdir="/home/$DOCKER_USER" \
     $device_options \
