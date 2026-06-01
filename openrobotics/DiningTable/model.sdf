@@ -15,10 +15,10 @@
           </mesh>
         </geometry>
         <material>
-          <ambient>0.7 0.7 0.7 1</ambient>
-          <diffuse>0.7 0.7 0.7 1</diffuse>
-          <specular>0.3 0.3 0.3 1</specular>
-          <emissive>0.04 0.04 0.04 1</emissive>
+          <ambient>0.71 0.52 0.32 1</ambient>
+          <diffuse>0.71 0.52 0.32 1</diffuse>
+          <specular>0.25 0.18 0.1 1</specular>
+          <emissive>0.04 0.03 0.02 1</emissive>
         </material>
       </visual>
       <visual name="visual_black">
