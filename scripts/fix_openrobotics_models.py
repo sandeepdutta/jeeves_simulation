@@ -91,15 +91,23 @@ def fix_sdf(sdf_path, model_name):
 
     def fix_material(m):
         mat = m.group(1)
-        # Keep black/metal visuals as-is if they have a low diffuse already
-        if re.search(r'<diffuse>0\.[0-3]', mat):
-            # dark material — just ensure ambient and emissive are set
-            if '<ambient>' not in mat:
-                mat = mat.rstrip() + f'\n          <ambient>0.1 0.1 0.1 1</ambient>\n        '
-            if '<emissive>' not in mat:
-                mat = mat.rstrip() + f'\n          <emissive>0.01 0.01 0.01 1</emissive>\n        '
+        # Dark visuals (table legs, metal parts) — preserve low diffuse, patch missing tags
+        if re.search(r'<diffuse>\s*0\.[0-3]', mat):
+            for tag, val in [('ambient', '0.1 0.1 0.1 1'), ('emissive', '0.01 0.01 0.01 1')]:
+                mat = re.sub(rf'<{tag}>[^<]*</{tag}>', f'<{tag}>{val}</{tag}>', mat)
+                if f'<{tag}>' not in mat:
+                    mat = mat.rstrip() + f'\n          <{tag}>{val}</{tag}>\n        '
             return f'<material>{mat}</material>'
-        # Standard material — replace diffuse/specular with full set
+        # Always replace colour tags with MODEL_COLORS values
+        replacements = {
+            'ambient':  ambient,
+            'diffuse':  diffuse,
+            'specular': specular,
+            'emissive': emissive,
+        }
+        for tag, val in replacements.items():
+            mat = re.sub(rf'<{tag}>[^<]*</{tag}>', f'<{tag}>{val}</{tag}>', mat)
+        # Add any missing tags
         if '<ambient>' not in mat:
             mat = f'{build_material_xml(ambient, diffuse, specular, emissive)}\n        '
         return f'<material>{mat}</material>'
