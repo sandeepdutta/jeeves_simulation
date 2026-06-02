@@ -1,5 +1,5 @@
 # Jeeves Simulation — Project Memory
-*Generated 2026-06-01 to support computer migration*
+*Updated 2026-06-02*
 
 ---
 
@@ -38,15 +38,43 @@
 
 ## Docker Setup
 
-### `docker_run.sh` key flags
-- `--gpus all` — GPU passthrough
-- `--env NVIDIA_DRIVER_CAPABILITIES=all` — enables OpenGL (not just CUDA)
-- `--env MESA_LOADER_DRIVER_OVERRIDE=d3d12` — Mesa D3D12 backend (WSL2 GPU rendering)
-- `--env MESA_GL_VERSION_OVERRIDE=4.5COMPAT` — lets Ogre2 initialise
-- `--env GZ_SIM_RESOURCE_PATH=/home/admin/openrobotics` — Gazebo model search path
-- X11 socket mounted for display
+### Multi-platform support
+
+Both `docker_run.sh` and `docker_build.sh` accept an optional platform argument:
+
+```bash
+# Build
+./docker_build.sh           # auto-detects arch (arm64 on Apple Silicon, amd64 on x86)
+./docker_build.sh amd64     # force AMD64 (Rosetta emulation on Apple Silicon)
+./docker_build.sh arm64     # force ARM64
+
+# Run
+./docker_run.sh             # NVIDIA/WSL2 mode (default)
+./docker_run.sh parallels   # Parallels VM / no-GPU mode
+```
+
+**Dockerfile does not change between platforms** — same image, different runtime flags.
+
+**Apple Silicon note**: `gz-harmonic` and `ros-humble-moveit*` may lack ARM64 apt packages. If `arm64` build fails on those, use `./docker_build.sh amd64` (Rosetta 2 emulation — slower but fully compatible).
+
+### Platform differences (`docker_run.sh`)
+
+| Setting | NVIDIA/WSL2 | Parallels |
+|---|---|---|
+| Container name | `jeeves_simulation_humble` | `jeeves_simulation_humble_parallels` |
+| `--gpus all` | ✓ | ✗ |
+| `NVIDIA_DRIVER_CAPABILITIES` | `all` | — |
+| `/usr/lib/wsl` mount | ✓ | ✗ |
+| Vulkan ICD mount | ✓ | ✗ |
+| `MESA_LOADER_DRIVER_OVERRIDE` | `d3d12` | — |
+| `MESA_GL_VERSION_OVERRIDE` | `4.5COMPAT` | — |
+| `LIBGL_ALWAYS_SOFTWARE` | — | `1` |
+
+### `docker_run.sh` common flags (both platforms)
+- `--env GZ_SIM_RESOURCE_PATH=/home/admin/openrobotics`
+- X11 socket + xauth mounted for display
 - `~/.gz` mounted for Gazebo cache persistence
-- `mkdir -p "${HOME}/.gz/sim"` — created before mount to avoid root-owned dir
+- `mkdir -p "${HOME}/.gz/sim"` — prevents root-owned dir on first run
 
 ### `Dockerfile.base` key packages installed
 - `gz-harmonic`, `ros-humble-ros-gzharmonic`
@@ -279,12 +307,25 @@ rviz2 --ros-args -p use_sim_time:=true
 
 ## Computer Migration Checklist
 
+### Common steps (all platforms)
 - [ ] Copy `~/jeeves_simulation/` (entire directory)
 - [ ] Copy `~/openrobotics/` (downloaded Fuel models)
-- [ ] Install WSL2 + Ubuntu 22.04
-- [ ] Install Docker Desktop with WSL2 backend
-- [ ] Install NVIDIA driver on Windows (includes WSL2 support)
-- [ ] Run `docker_build.sh` to build the image OR pull `sandeepdutta/jeeves_humble_final:latest`
-- [ ] Run `python3 ~/jeeves_simulation/scripts/fix_openrobotics_models.py` (models need `_clean.dae` files regenerated)
-- [ ] Verify GPU: `glxinfo | grep renderer` should show `D3D12 (NVIDIA ...)`
+- [ ] Install Docker
+- [ ] Run `python3 ~/jeeves_simulation/scripts/fix_openrobotics_models.py` inside container (regenerates `_clean.dae`)
 - [ ] Rebuild ROS workspace: `colcon build` in `~/jeeves_simulation/ros_ws/`
+
+### Windows 11 + WSL2 + NVIDIA
+- [ ] Install WSL2 + Ubuntu 22.04
+- [ ] Install NVIDIA driver on Windows (includes WSL2 GPU support)
+- [ ] Install Docker Desktop with WSL2 backend
+- [ ] `./docker_build.sh` (auto-detects amd64) OR pull `sandeepdutta/jeeves_humble_final:latest`
+- [ ] `./docker_run.sh` (NVIDIA mode)
+- [ ] Verify GPU: inside container `glxinfo | grep renderer` → `D3D12 (NVIDIA GeForce RTX 3080)`
+
+### Mac (Parallels VM)
+- [ ] Install Parallels + Ubuntu 22.04 ARM VM
+- [ ] Install Docker inside the VM
+- [ ] `./docker_build.sh` (auto-detects arm64) — if packages fail, try `./docker_build.sh amd64`
+- [ ] `./docker_run.sh parallels`
+- [ ] Rendering will use software (llvmpipe) — Gazebo works but slower
+- [ ] No PBR texture issues (already using ambient/diffuse fallback)
