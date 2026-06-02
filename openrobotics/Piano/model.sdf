@@ -9,6 +9,12 @@
             <uri>meshes/piano_clean.dae</uri>
           </mesh>
         </geometry>
+        <material>
+          <ambient>0.08 0.08 0.08 1</ambient>
+          <diffuse>0.08 0.08 0.08 1</diffuse>
+          <specular>0.6 0.6 0.6 1</specular>
+          <emissive>0.05 0.05 0.05 1</emissive>
+        </material>
       </visual>
       <collision name="Box001">
         <pose>0.243129 0.00788122 0.603422 0.0 0.0 0.0</pose>

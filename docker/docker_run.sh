@@ -1,9 +1,18 @@
 #!/usr/bin/env bash
 # Usage:
-#   ./docker_run.sh           — NVIDIA/WSL2 mode (default)
-#   ./docker_run.sh parallels — Parallels VM / no-GPU mode
+#   ./docker_run.sh                    — NVIDIA/WSL2 mode, attach if already running
+#   ./docker_run.sh parallels          — Parallels VM / no-GPU mode
+#   ./docker_run.sh fresh              — stop old container and start fresh from latest image
+#   ./docker_run.sh parallels fresh    — Parallels + fresh start
 
-PLATFORM=${1:-nvidia}
+PLATFORM="nvidia"
+FRESH=false
+for arg in "$@"; do
+    case "$arg" in
+        parallels) PLATFORM="parallels" ;;
+        fresh)     FRESH=true ;;
+    esac
+done
 
 DOCKER_USER="admin"
 BASH_HISTORY_FILE=${PWD%/*}/.bash_history
@@ -48,16 +57,24 @@ for device in /dev/dri/*; do
     [ -e "$device" ] && device_options+="--device=$device "
 done
 
+# ── Fresh mode: stop old container so the new image is used ──────────────────
+if [ "$FRESH" = true ]; then
+    echo "Fresh mode — stopping existing container $CONTAINER_NAME..."
+    docker stop "$CONTAINER_NAME" 2>/dev/null || true
+    docker rm   "$CONTAINER_NAME" 2>/dev/null || true
+fi
+
 # ── Attach if already running ─────────────────────────────────────────────────
 if docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
     echo "Container $CONTAINER_NAME already running — attaching new shell."
+    echo "  (use './docker_run.sh fresh' to restart from the latest image)"
     docker exec -it $CONTAINER_NAME bash
     exit 0
 fi
 
 echo "Starting container: $CONTAINER_NAME  (platform: $PLATFORM)"
 
-docker run -it --rm \
+docker run -it --rm --pull never \
     --name $CONTAINER_NAME \
     $GPU_FLAGS \
     --user $(id -u):$(id -g) \
