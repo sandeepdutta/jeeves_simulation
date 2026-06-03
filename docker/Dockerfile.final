@@ -1,9 +1,10 @@
 ARG BASE_IMAGE=jeeves_humble_urdf
 FROM ${BASE_IMAGE}
 
-# Create a non-root user
+# Create a non-root user and take ownership of the O3DE build
 RUN useradd -m -s /bin/bash admin && \
-    echo "admin ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/admin
+    echo "admin ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/admin && \
+    if [ -d /data ]; then chown -R admin:admin /data; fi
 
 # Set up the user's environment
 COPY ./.bashrc /home/admin/.bashrc

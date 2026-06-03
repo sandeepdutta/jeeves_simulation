@@ -1,0 +1,166 @@
+# O3DE layer — builds on top of the Jeeves final image.
+# Based on https://github.com/o3de/RobotVacuumSample/blob/main/Docker/Dockerfile
+# adapted for branch 2605.0 and the Jeeves project.
+#
+# WARNING: this build takes 2–3 hours and produces a ~40 GB image.
+
+ARG BASE_IMAGE=sandeepdutta/jeeves_humble_final:latest
+FROM ${BASE_IMAGE}
+
+ARG ROS_DISTRO=humble
+
+# ── O3DE / extras source ──────────────────────────────────────────────────────
+ARG O3DE_REPO=https://github.com/o3de/o3de.git
+ARG O3DE_BRANCH=2605.0
+
+ARG O3DE_EXTRAS_REPO=https://github.com/o3de/o3de-extras.git
+ARG O3DE_EXTRAS_BRANCH=2605.0
+
+ARG CMAKE_JOBS=8
+
+ENV PROJECT_NAME=JeevesO3DEDemo
+ENV WORKSPACE=/data/workspace
+WORKDIR $WORKSPACE
+
+ARG DEBIAN_FRONTEND=noninteractive
+
+# ── Locale ────────────────────────────────────────────────────────────────────
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    tzdata locales keyboard-configuration \
+    && sed -i -e 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen \
+    && dpkg-reconfigure --frontend=noninteractive locales \
+    && update-locale LANG=en_US.UTF-8 \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV LANG=en_US.UTF-8
+
+# ── CMake ≥ 3.24 from Kitware (Ubuntu 22.04 ships 3.22; O3DE requires 3.24) ──
+RUN apt-get update && apt-get install -y --no-install-recommends gpg wget \
+    && wget -qO - https://apt.kitware.com/keys/kitware-archive-latest.asc \
+        | gpg --dearmor -o /usr/share/keyrings/kitware-archive-keyring.gpg \
+    && echo 'deb [signed-by=/usr/share/keyrings/kitware-archive-keyring.gpg] https://apt.kitware.com/ubuntu/ jammy main' \
+        > /etc/apt/sources.list.d/kitware.list \
+    && apt-get update && apt-get install -y cmake \
+    && rm -rf /var/lib/apt/lists/*
+
+# ── Build tools and O3DE system dependencies ─────────────────────────────────
+# libnvidia-gl-* omitted — GPU drivers supplied by host.
+# cmake omitted — already installed from Kitware above.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    git-lfs \
+    clang-12 \
+    ninja-build \
+    libglu1-mesa-dev \
+    libxcb-xinerama0 \
+    libxcb-xinput0 \
+    libxcb-xinput-dev \
+    libxcb-xfixes0-dev \
+    libxcb-xkb-dev \
+    libxkbcommon-dev \
+    libxkbcommon-x11-dev \
+    libfontconfig1-dev \
+    libcurl4-openssl-dev \
+    libsdl2-dev \
+    libssl-dev \
+    libxcb-icccm4 \
+    libxcb-icccm4-dev \
+    libxcb-image0 \
+    libxcb-image0-dev \
+    libxcb-keysyms1 \
+    libxcb-keysyms1-dev \
+    libxcb-render-util0 \
+    libxcb-render-util0-dev \
+    libxcb-randr0 \
+    libxcb-randr0-dev \
+    libpcre2-16-0 \
+    mesa-common-dev \
+    zlib1g-dev \
+    ufw \
+    && rm -rf /var/lib/apt/lists/*
+
+# ── clang-12 as default cc/c++ ────────────────────────────────────────────────
+RUN update-alternatives --install /usr/bin/cc  cc  /usr/bin/clang-12  100 \
+    && update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++-12 100
+
+# ── Additional ROS 2 packages for O3DE ROS2 Gem ───────────────────────────────
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ros-${ROS_DISTRO}-desktop \
+    ros-${ROS_DISTRO}-ackermann-msgs \
+    ros-${ROS_DISTRO}-control-toolbox \
+    ros-${ROS_DISTRO}-gazebo-msgs \
+    ros-${ROS_DISTRO}-joy \
+    ros-${ROS_DISTRO}-vision-msgs \
+    ros-${ROS_DISTRO}-nav-msgs \
+    ros-${ROS_DISTRO}-cyclonedds \
+    ros-${ROS_DISTRO}-rmw-cyclonedds-cpp \
+    ros-${ROS_DISTRO}-slam-toolbox \
+    ros-${ROS_DISTRO}-navigation2 \
+    ros-${ROS_DISTRO}-nav2-bringup \
+    ros-${ROS_DISTRO}-pointcloud-to-laserscan \
+    ros-${ROS_DISTRO}-topic-tools \
+    python3-colcon-common-extensions \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN pip3 install python-statemachine
+
+# ── 1. Clone O3DE engine + bootstrap Python ───────────────────────────────────
+# GIT_LFS_SKIP_SMUDGE=1: o3de CDN LFS auth fails; source files are sufficient.
+RUN GIT_LFS_SKIP_SMUDGE=1 git clone $O3DE_REPO \
+    && git -C $WORKSPACE/o3de checkout $O3DE_BRANCH \
+    && git -C $WORKSPACE/o3de lfs install \
+    && $WORKSPACE/o3de/python/get_python.sh \
+    && $WORKSPACE/o3de/scripts/o3de.sh register -ep $WORKSPACE/o3de
+
+# ── 2. Clone O3DE extras + register gems ──────────────────────────────────────
+RUN GIT_LFS_SKIP_SMUDGE=1 git clone $O3DE_EXTRAS_REPO \
+    && git -C $WORKSPACE/o3de-extras checkout $O3DE_EXTRAS_BRANCH \
+    && git -C $WORKSPACE/o3de-extras lfs install \
+    && $WORKSPACE/o3de/scripts/o3de.sh register -gp $WORKSPACE/o3de-extras/Gems/ROS2 \
+    && ($WORKSPACE/o3de/scripts/o3de.sh register -gp $WORKSPACE/o3de-extras/Gems/ROS2Controllers       || true) \
+    && ($WORKSPACE/o3de/scripts/o3de.sh register -gp $WORKSPACE/o3de-extras/Gems/ROS2RobotImporter     || true) \
+    && ($WORKSPACE/o3de/scripts/o3de.sh register -gp $WORKSPACE/o3de-extras/Gems/ROS2SampleRobots      || true) \
+    && ($WORKSPACE/o3de/scripts/o3de.sh register -gp $WORKSPACE/o3de-extras/Gems/ROS2Sensors           || true) \
+    && ($WORKSPACE/o3de/scripts/o3de.sh register -gp $WORKSPACE/o3de-extras/Gems/SimulationInterfaces  || true) \
+    && ($WORKSPACE/o3de/scripts/o3de.sh register -gp $WORKSPACE/o3de-extras/Gems/LevelGeoreferencing   || true) \
+    && ($WORKSPACE/o3de/scripts/o3de.sh register -gp $WORKSPACE/o3de-extras/Gems/WarehouseAssets       || true) \
+    && ($WORKSPACE/o3de/scripts/o3de.sh register -gp $WORKSPACE/o3de-extras/Gems/WarehouseSample       || true)
+
+# ── 3. Create project from ROS2 template ──────────────────────────────────────
+RUN ($WORKSPACE/o3de/scripts/o3de.sh create-project \
+        --project-path $WORKSPACE/$PROJECT_NAME \
+        --template-path $WORKSPACE/o3de-extras/Templates/Ros2ProjectTemplate/ -f || true) \
+    && test -d $WORKSPACE/$PROJECT_NAME
+
+# ── 4. CMake configure ────────────────────────────────────────────────────────
+RUN . /opt/ros/${ROS_DISTRO}/setup.sh \
+    && cmake -B $WORKSPACE/$PROJECT_NAME/build/linux \
+             -S $WORKSPACE/$PROJECT_NAME \
+             -G "Ninja Multi-Config" \
+             -DLY_STRIP_DEBUG_SYMBOLS=TRUE \
+             -DLY_DISABLE_TEST_MODULES=ON
+
+# ── 5. Build Editor + AssetProcessor + GameLauncher (~60–90 min) ──────────────
+RUN . /opt/ros/${ROS_DISTRO}/setup.sh \
+    && cmake --build $WORKSPACE/$PROJECT_NAME/build/linux \
+             --config profile \
+             --target ${PROJECT_NAME}.GameLauncher Editor AssetProcessor \
+             -j $CMAKE_JOBS
+
+# ── 6. Process assets (~60–90 min) ────────────────────────────────────────────
+RUN . /opt/ros/${ROS_DISTRO}/setup.sh \
+    && cmake --build $WORKSPACE/$PROJECT_NAME/build/linux \
+             --config profile \
+             --target ${PROJECT_NAME}.Assets \
+             -j $CMAKE_JOBS
+
+# ── 7. Clean up build artefacts and fix permissions ───────────────────────────
+RUN rm -rf $WORKSPACE/o3de/.git \
+           $WORKSPACE/o3de-extras/.git \
+           $WORKSPACE/$PROJECT_NAME/build/linux/3rdParty \
+           $WORKSPACE/$PROJECT_NAME/build/linux/CMakeFiles \
+    && chmod -R u+w,g+w $WORKSPACE/$PROJECT_NAME/Cache/ 2>/dev/null || true
+
+ENV RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+ENV NVIDIA_VISIBLE_DEVICES=all
+ENV NVIDIA_DRIVER_CAPABILITIES=all

@@ -36,6 +36,7 @@ else
         "--env=LD_LIBRARY_PATH=/usr/lib/wsl/lib"
         "--env=MESA_LOADER_DRIVER_OVERRIDE=d3d12"
         "--env=MESA_GL_VERSION_OVERRIDE=4.5COMPAT"
+        "--env=VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/dzn_icd.x86_64.json"
     )
 fi
 

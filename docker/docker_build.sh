@@ -23,12 +23,13 @@ PLATFORM="linux/$ARCH"
 echo "Building for platform: $PLATFORM"
 
 CONTAINER_NAME_BASE="jeeves_simulation_humble_base"
+CONTAINER_NAME_O3DE="jeeves_humble_o3de_base"
 CONTAINER_NAME_URDF="jeeves_humble_urdf"
 FINAL_IMAGE="sandeepdutta/jeeves_humble_final:latest"
 
 # Remove old images so Docker cannot reuse stale layers
 echo "Removing old images..."
-docker rmi "$FINAL_IMAGE" "$CONTAINER_NAME_URDF:latest" 2>/dev/null || true
+docker rmi "$FINAL_IMAGE" "$CONTAINER_NAME_URDF:latest" "$CONTAINER_NAME_O3DE:latest" 2>/dev/null || true
 
 echo "Building ROS2-Humble base image..."
 docker build --rm \
@@ -37,12 +38,20 @@ docker build --rm \
     -f "$SCRIPT_DIR/Dockerfile.base" \
     "$SCRIPT_DIR"
 
+echo "Building O3DE layer (this will take 2–3 hours)..."
+docker build --rm \
+    --platform "$PLATFORM" \
+    -t $CONTAINER_NAME_O3DE:latest \
+    -f "$SCRIPT_DIR/Dockerfile.o3de" \
+    --build-arg BASE_IMAGE=$CONTAINER_NAME_BASE \
+    "$SCRIPT_DIR"
+
 echo "Building URDF image..."
 docker build --rm \
     --platform "$PLATFORM" \
     -t $CONTAINER_NAME_URDF:latest \
     -f "$JEEVES_SIM_DOCKERFILE" \
-    --build-arg BASE_IMAGE=$CONTAINER_NAME_BASE \
+    --build-arg BASE_IMAGE=$CONTAINER_NAME_O3DE \
     "$ROS_SRC"
 
 echo "Building final image..."
